@@ -10,6 +10,8 @@ using Discord;
 using System.Globalization;
 using System.Reflection;
 using Lavalink4NET;
+using Discord.Commands;
+using Discord.Commands.Builders;
 
 namespace DiscordBotV3;
 public class Program
@@ -19,8 +21,9 @@ public class Program
 
     private static readonly DiscordSocketConfig _socketConfig = new()
     {
-        GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers,
+        GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers | GatewayIntents.MessageContent,
         AlwaysDownloadUsers = true,
+        MessageCacheSize = 100,
     };
 
     private static readonly InteractionServiceConfig _interactionServiceConfig = new()
@@ -29,11 +32,17 @@ public class Program
             new CultureInfo("en-US"), new CultureInfo("ru"))
     };
 
+    private static readonly CommandServiceConfig _commandConfig = new()
+    {
+        LogLevel = LogSeverity.Info,
+        CaseSensitiveCommands = false,        
+    };
+
     public static async Task Main(string[] args)
     {
         _configuration = new ConfigurationBuilder()
             .AddEnvironmentVariables(prefix: "DC_")
-            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile("appsettings.json", optional: true)            
             .Build();
 
         _services = new ServiceCollection()
@@ -41,7 +50,9 @@ public class Program
             .AddSingleton(_socketConfig)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>() /*_interactionServiceConfig*/))
+            .AddSingleton(new CommandService(_commandConfig))
             .AddSingleton<InteractionHandler>()
+            .AddSingleton<TextCommandHandler>()
             .AddLavalink()
             .BuildServiceProvider();
 
@@ -54,6 +65,9 @@ public class Program
             .InitializeAsync();
 
         await _services.GetRequiredService<IAudioService>().StartAsync();
+
+        await _services.GetRequiredService<TextCommandHandler>()
+            .InstallCommandsAsync();
 
         // Bot token can be provided from the Configuration object we set up earlier
         await client.LoginAsync(TokenType.Bot, _configuration["token"]);
