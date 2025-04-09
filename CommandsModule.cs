@@ -76,28 +76,53 @@ public sealed class CommandsModule : InteractionModuleBase<SocketInteractionCont
         [Summary("Min","Минимальное значение ролла")]
         int? Min = null,
         [Summary("Reason","На что ролим?")]
-        string? reason = null)
+        string? reason = "по приколу.")
     {
         await DeferAsync(false).ConfigureAwait(false);
 
-        Random rnd = new Random();
-        if (Min > Max)
+
+        static Embed rollEmbedBuilder(int Max, int? Min, string? reason)
         {
-            await FollowupAsync("🤓 минимум не может быть больше максимума");
+            Random rnd = new Random();
+
+            EmbedBuilder builder = new EmbedBuilder();
+
+            builder.WithTitle($"Выпало: {rnd.Next((int)Min, Max)}!");
+            builder.AddField($"В промежутке от {Min} до {Max}", $"Причина: {reason}");
+            builder.ThumbnailUrl = "https://media.discordapp.net/attachments/1051550324181180446/1146720897261109248/uvyDice.gif?ex=67f77f0e&is=67f62d8e&hm=4d3740216da5b6298e50913b9ed795ca942396430755188981cf816c3129cef9&";
+
+            return builder.Build();
         }
 
+        if (Min > Max)
+        {
+            EmbedBuilder builder = new EmbedBuilder();
 
+            builder.WithTitle("Выпало: Error!");
+            builder.AddField("В промежутке от nil до null", "Причина: минимум не может быть больше максимума!");
+            builder.ThumbnailUrl = "https://tenor.com/view/cat-catcry-gif-19131995";
+
+            Embed embed = builder.Build();
+
+            await FollowupAsync(embed: embed).ConfigureAwait(false);
+        }
         if (Min != null)
         {
-            await FollowupAsync($"{reason}\nРолим между {Min} и {Max}\nВыпало: {rnd.Next((int)Min,Max)}");
+            Embed embed = rollEmbedBuilder(Max, Min, reason);
+
+            await FollowupAsync(embed: embed).ConfigureAwait(false);
         }
         else if (Max < 0)
         {
-            await FollowupAsync($"{reason}\nРолим между {Max} и 0\nВыпало: {rnd.Next(Max,0)}");
+            Embed embed = rollEmbedBuilder(0, Max, reason);
+
+            await FollowupAsync(embed: embed).ConfigureAwait(false);
         }
         else
         {
-            await FollowupAsync($"{reason}\nРолим между 0 и {Max}\nВыпало: {rnd.Next(Max)}");
+            Embed embed = rollEmbedBuilder(Max, 0, reason);
+
+            await FollowupAsync(embed: embed).ConfigureAwait(false);
         }
         
     }
