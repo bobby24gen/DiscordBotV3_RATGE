@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -292,28 +293,65 @@ public class SqliteHelper
     {
         using (var connection = new SqliteConnection(connectionString))
         {
-            connection.Open();
-
-            SqliteCommand command = connection.CreateCommand();
-            command.Connection = connection;
-
-            command.CommandText = "Delete From Memes Where Tag = @tag";
-            command.Parameters.AddWithValue("tag", tag);
-            try
+            if (DoTagExist(tag))
             {
-                command.ExecuteNonQuery();
-                connection.Close();
+                connection.Open();
+
+                SqliteCommand command = connection.CreateCommand();
+                command.Connection = connection;
+
+                command.CommandText = "Delete From Memes Where Tag = @tag";
+                command.Parameters.AddWithValue("tag", tag);
+                try
+                {
+                    command.ExecuteNonQuery();
+                    connection.Close();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+                return true;
             }
-            catch (Exception)
+            else
             {
                 return false;
             }
-            return true;
-
         }
     }
 
     public bool DelMeme(string link)
+    {
+        using (var connection = new SqliteConnection(connectionString))
+        {
+            if (DoMemeExist(link)) // check if link is valid for deletion
+            {
+                connection.Open();
+
+                SqliteCommand command = connection.CreateCommand();
+                command.Connection = connection;
+
+                command.CommandText = "Delete From Memes Where Link = @link";
+                command.Parameters.AddWithValue("link", link);
+                try
+                {
+                    command.ExecuteNonQuery();
+                    connection.Close();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+    
+    private bool DoMemeExist(string link)// should not dublicate this, but fuck
     {
         using (var connection = new SqliteConnection(connectionString))
         {
@@ -322,20 +360,49 @@ public class SqliteHelper
             SqliteCommand command = connection.CreateCommand();
             command.Connection = connection;
 
-            command.CommandText = "Delete From Memes Where Link = @link";
+            command.CommandText = "Select * From Memes Where Link = @link";
             command.Parameters.AddWithValue("link", link);
-            try
+            using (SqliteDataReader reader = command.ExecuteReader())
             {
-                command.ExecuteNonQuery();
-                connection.Close();
+                if (reader.HasRows)
+                {
+                    connection.Close();
+                    return true;
+                }
+                else
+                {
+                    connection.Close();
+                    return false;
+                }
             }
-            catch (Exception)
-            {
-                return false;
-            }
-            return true;
 
         }
     }
-    
+    private bool DoTagExist(string tag)// should not dublicate this, but fuck
+    {
+        using (var connection = new SqliteConnection(connectionString))
+        {
+            connection.Open();
+
+            SqliteCommand command = connection.CreateCommand();
+            command.Connection = connection;
+
+            command.CommandText = "Select * From Memes Where Tag = @tag";
+            command.Parameters.AddWithValue("tag", tag);
+            using (SqliteDataReader reader = command.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    connection.Close();
+                    return true;
+                }
+                else
+                {
+                    connection.Close();
+                    return false;
+                }
+            }
+
+        }
+    }
 }
