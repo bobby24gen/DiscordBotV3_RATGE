@@ -282,9 +282,16 @@ public sealed class CommandsModule : InteractionModuleBase<SocketInteractionCont
         string text)
     {
         await DeferAsync(false).ConfigureAwait(false);
-
-        var emote = Emote.Parse(text);
-
+        Emote emote = null;
+        if (IsAllDigits(text))
+        {
+            emote = Emote.Parse($"<:noname:{text}>");
+        }
+        else
+        {
+            emote = Emote.Parse(text);
+        }
+        
         EmbedBuilder builder = new EmbedBuilder();
 
         builder.WithTitle("Emote");
@@ -392,5 +399,8 @@ public sealed class CommandsModule : InteractionModuleBase<SocketInteractionCont
         }
         return false;
     }
-    
+    public static bool IsAllDigits(string input)
+    {
+        return !string.IsNullOrEmpty(input) && input.All(char.IsDigit);
+    }
 }
