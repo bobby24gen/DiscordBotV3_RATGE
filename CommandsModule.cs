@@ -282,15 +282,26 @@ public sealed class CommandsModule : InteractionModuleBase<SocketInteractionCont
         string text)
     {
         await DeferAsync(false).ConfigureAwait(false);
-        Emote emote = null;
-        if (IsAllDigits(text))
+        Emote emote;
+        try
         {
-            emote = Emote.Parse($"<:noname:{text}>");
+            
+            if (IsAllDigits(text))
+            {
+                emote = Emote.Parse($"<:noname:{text}>");
+            }
+            else
+            {
+                emote = Emote.Parse(text);
+            }
         }
-        else
+        catch (Exception)
         {
-            emote = Emote.Parse(text);
+            await FollowupAsync("Не получилось распарсить эмоут. Нужнен либо id, либо выбери его при наборе текста")
+                .ConfigureAwait(false);
+            throw;
         }
+        
         
         EmbedBuilder builder = new EmbedBuilder();
 

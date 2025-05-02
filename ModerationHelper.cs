@@ -24,8 +24,6 @@ namespace DiscordBotV3
             _client = client;
             _configuration = config;
 
-            Console.WriteLine(_configuration.GetValue<ulong>("moderationChannel"));
-
             _client.MessageDeleted += OnMessageDeleted;
             _client.MessageUpdated += _client_MessageUpdated;
         }
@@ -38,6 +36,10 @@ namespace DiscordBotV3
                 return Task.CompletedTask;
             }
             if (cacheable.Value.Author.IsBot) 
+            {
+                return Task.CompletedTask;
+            }
+            if (cacheable.Value.Content == edited.Content)
             {
                 return Task.CompletedTask;
             }
