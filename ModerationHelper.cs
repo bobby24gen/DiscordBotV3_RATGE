@@ -26,6 +26,26 @@ namespace DiscordBotV3
 
             _client.MessageDeleted += OnMessageDeleted;
             _client.MessageUpdated += _client_MessageUpdated;
+            _client.UserLeft += _client_UserLeft;
+        }
+
+        private Task _client_UserLeft(SocketGuild userGuild, SocketUser userLeft)
+        {
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithTitle("Юзер покинул крысятник");
+            builder.ThumbnailUrl = userLeft.GetAvatarUrl();
+            builder.AddField("Юзер", $"{userLeft.Mention}");
+            builder.AddField("ID", $"{userLeft.Id}");
+            builder.AddField("Ник", $"{userLeft.GlobalName}");
+            Embed message = builder.Build();
+
+            var sysChannel = userGuild.SystemChannel; // Канал где пишется приветствие юзера на сервер
+            if (sysChannel != null) 
+            {
+                sysChannel.SendMessageAsync(embed: message);
+            }
+            
+            return Task.CompletedTask;
         }
 
         private Task _client_MessageUpdated(Cacheable<IMessage, ulong> cacheable, SocketMessage edited, ISocketMessageChannel socketMessageChannel)
@@ -48,7 +68,7 @@ namespace DiscordBotV3
             EmbedBuilder builder = new EmbedBuilder();
             builder.WithTitle("Сообщение отредактированно");
             builder.ThumbnailUrl = cacheable.Value.Author.GetAvatarUrl();
-            builder.AddField("Юзер", $"{cacheable.Value.Author}");
+            builder.AddField("Юзер", $"{cacheable.Value.Author.Mention}");
             builder.AddField("Канал", $"{socketMessageChannel.Name}");
 
             builder.AddField("Оригинальный текст", $" {cacheable.Value.Content}");
@@ -82,7 +102,7 @@ namespace DiscordBotV3
                 EmbedBuilder builder = new EmbedBuilder();
                 builder.WithTitle("Сообщение удалено");
                 builder.ThumbnailUrl = cacheable1.Value.Author.GetAvatarUrl();
-                builder.AddField("Юзер", $"{cacheable1.Value.Author}");
+                builder.AddField("Юзер", $"{cacheable1.Value.Author.Mention}");
                 builder.AddField("Канал", $"{cacheable2.Value.Name}");
 
                 if (cacheable1.Value.Content.Length > 0)
