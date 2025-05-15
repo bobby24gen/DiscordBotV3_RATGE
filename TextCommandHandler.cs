@@ -78,7 +78,7 @@ namespace DiscordBotV3
             int random = _random.Next(serverReactions.Length);
             Random rng = new Random();
             int rand = rng.Next(100);
-            Console.WriteLine($"{rand} выпал, он меньше 10? - {rand < 10}");
+            //Console.WriteLine($"{rand} выпал, он меньше 10? - {rand < 10}");
             if (rand < 10)
             {
                 await Context.Message.AddReactionAsync(serverReactions[random]);

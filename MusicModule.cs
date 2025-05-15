@@ -16,10 +16,8 @@ using Lavalink4NET.Rest.Entities.Tracks;
 ///     Presents some of the main features of the Lavalink4NET-Library.
 /// </summary>
 [RequireContext(ContextType.Guild)]
-[RequireRole("Крутышки", Group = "DJ")]
-[RequireRole("Крысюк", Group = "DJ")]
+[RequireRole("Verified", Group = "DJ")]
 [RequireOwner(Group = "DJ")]
-[DontAutoRegister]
 public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly IAudioService _audioService;
@@ -83,7 +81,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
     /// </summary>
     /// <param name="query">the search query</param>
     /// <returns>a task that represents the asynchronous operation</returns>
-    [SlashCommand("play", description: "Играем музыку", runMode: RunMode.Async)]
+    [SlashCommand("play", description: "Играем музыку, закидываем URL или текст для поиска в ютубе", runMode: RunMode.Async)]
     public async Task Play(string query)
     {
         await DeferAsync(true).ConfigureAwait(false);
@@ -101,7 +99,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (track is null)
         {
-            await FollowupAsync("😖 Нет результатов по запросу.").ConfigureAwait(false);
+            await FollowupAsync("😖 Нет результатов по запросу.", ephemeral: true).ConfigureAwait(false);
             await Disconnect();
             return;
         }
@@ -110,11 +108,11 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (position is 0)
         {
-            await FollowupAsync($"🔈 Играем: {track.Uri}").ConfigureAwait(false);
+            await FollowupAsync($"🔈 Играем: {track.Uri}", ephemeral: true).ConfigureAwait(false);
         }
         else
         {
-            await FollowupAsync($"🔈 Добавили в список: {track.Uri}").ConfigureAwait(false);
+            await FollowupAsync($"🔈 Добавили в список: {track.Uri}", ephemeral: true).ConfigureAwait(false);
         }
     }
 
@@ -122,7 +120,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
     ///     Shows the track position asynchronously.
     /// </summary>
     /// <returns>a task that represents the asynchronous operation</returns>
-    [SlashCommand("position", description: "Показываем позицию трека", runMode: RunMode.Async)]
+    [SlashCommand("timeleft", description: "Показываем время трека", runMode: RunMode.Async)]
     public async Task Position()
     {
         var player = await GetPlayerAsync(connectToVoiceChannel: false).ConfigureAwait(false);
@@ -134,11 +132,12 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (player.CurrentTrack is null)
         {
-            await RespondAsync("Ничего не играет!").ConfigureAwait(false);
+            await RespondAsync("Ничего не играет!", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
-        await RespondAsync($"Позиция: {player.Position?.Position} / {player.CurrentTrack.Duration}.").ConfigureAwait(false);
+        await RespondAsync($"Позиция: {player.Position?.Position} / {player.CurrentTrack.Duration}.", ephemeral: true)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -157,12 +156,12 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (player.CurrentItem is null)
         {
-            await RespondAsync("Ничего не играет!").ConfigureAwait(false);
+            await RespondAsync("Ничего не играет!", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
         await player.StopAsync().ConfigureAwait(false);
-        await RespondAsync("Остановился.").ConfigureAwait(false);
+        await RespondAsync("Остановился.",ephemeral: true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -175,7 +174,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
     {
         if (volume is > 1000 or < 0)
         {
-            await RespondAsync("Чумба, ты ебанулся? Значения только: 0% - 1000%!").ConfigureAwait(false);
+            await RespondAsync("Чумба, ты ебанулся? Значения только: 0% - 1000%!", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
@@ -187,7 +186,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
         }
 
         await player.SetVolumeAsync(volume / 100f).ConfigureAwait(false);
-        await RespondAsync($"Звук изменён: {volume}%").ConfigureAwait(false);
+        await RespondAsync($"Громкостьь изменёна: {volume}%", ephemeral: false).ConfigureAwait(false);
     }
 
     [SlashCommand("skip", description: "Скип трека", runMode: RunMode.Async)]
@@ -202,7 +201,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (player.CurrentItem is null)
         {
-            await RespondAsync("Ничего не играет!").ConfigureAwait(false);
+            await RespondAsync("Ничего не играет!", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
@@ -212,11 +211,11 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (track is not null)
         {
-            await RespondAsync($"Скипнули, теперь играет: {track.Track!.Uri}").ConfigureAwait(false);
+            await RespondAsync($"Скипнули, теперь играет: {track.Track!.Uri}", ephemeral: true).ConfigureAwait(false);
         }
         else
         {
-            await RespondAsync("Скипнули, ничего нет в списке треков, останавливаемся.").ConfigureAwait(false);
+            await RespondAsync("Скипнули, ничего нет в списке треков, останавливаемся.", ephemeral: true).ConfigureAwait(false);
             await Disconnect();
         }
     }
@@ -233,12 +232,12 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (player.State is PlayerState.Paused)
         {
-            await RespondAsync("Чумба, мы уже на паузе.").ConfigureAwait(false);
+            await RespondAsync("Чумба, мы уже на паузе.", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
         await player.PauseAsync().ConfigureAwait(false);
-        await RespondAsync("Остановились.").ConfigureAwait(false);
+        await RespondAsync("Остановились.", ephemeral: true).ConfigureAwait(false);
     }
 
     [SlashCommand("resume", description: "Продолжаем играть.", runMode: RunMode.Async)]
@@ -253,12 +252,12 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
 
         if (player.State is not PlayerState.Paused)
         {
-            await RespondAsync("Чумба, мы и не останавливались.").ConfigureAwait(false);
+            await RespondAsync("Чумба, мы и не останавливались.", ephemeral: true).ConfigureAwait(false);
             return;
         }
 
         await player.ResumeAsync().ConfigureAwait(false);
-        await RespondAsync("Продолжаем.").ConfigureAwait(false);
+        await RespondAsync("Продолжаем.", ephemeral: true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -291,7 +290,7 @@ public sealed class MusicModule : InteractionModuleBase<SocketInteractionContext
             await FollowupAsync(errorMessage).ConfigureAwait(false);
             return null;
         }
-
+        await result.Player.SetVolumeAsync(50 / 100f); // fix
         return result.Player;
     }
 }

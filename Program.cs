@@ -21,7 +21,7 @@ public class Program
 
     private static readonly DiscordSocketConfig _socketConfig = new()
     {
-        GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers | GatewayIntents.MessageContent,
+        GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers | GatewayIntents.MessageContent | GatewayIntents.GuildVoiceStates,
         AlwaysDownloadUsers = true,
         MessageCacheSize = 100,
     };
