@@ -1,4 +1,5 @@
 Простой Discord бот использующий SQLite и Lavalink(https://github.com/lavalink-devs/Lavalink).
+Используется на 1 сервере, хочешь сделать под себя, делай сам.
 
 Настройка:
 Берём appsettings.json и заполняем:
