@@ -56,20 +56,33 @@ namespace DiscordBotV3
             int argPos = 0;
 
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix('!', ref argPos) ||
-                message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
-                message.Author.IsBot)
+            if (message.Author.IsBot)
                 return;
-
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
-
+            
+            await React(context);
             // Execute the command with the command context we just
             // created, along with the service provider for precondition checks.
             await _commands.ExecuteAsync(
                 context: context,
                 argPos: argPos,
                 services: _services);
+        }
+
+        public async Task React(SocketCommandContext Context)
+        {
+            Random _random = new Random();
+            var serverReactions = Context.Guild.Emotes.ToArray();
+
+            int random = _random.Next(serverReactions.Length);
+            Random rng = new Random();
+            int rand = rng.Next(100);
+            //Console.WriteLine($"{rand} выпал, он меньше 10? - {rand < 10}");
+            if (rand < 10)
+            {
+                await Context.Message.AddReactionAsync(serverReactions[random]);
+            }
         }
     }
 }
