@@ -1,16 +1,17 @@
 ﻿namespace DiscordBotV3;
 
+using AngleSharp;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Lavalink4NET;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Xml.Linq;
+using static DiscordBotV3.JsonClassHelper;
+using static System.Formats.Asn1.AsnWriter;
 
 [RequireContext(ContextType.Guild)]
 public sealed class CommandsModule : InteractionModuleBase<SocketInteractionContext>
@@ -317,23 +318,271 @@ public sealed class CommandsModule : InteractionModuleBase<SocketInteractionCont
         await FollowupAsync(embed: embed).ConfigureAwait(false);
     }
 
+    //[SlashCommand("test", "тестим")]
+    //[RequireOwner]
+    //public async Task Test()
+    //{
+    //}
 
-    [SlashCommand("test", "тестим на проде")]
-    [RequireOwner]
-    public async Task Test()
+    [SlashCommand("img34bytag", "Случайный пост Gelbooru")]
+    public async Task Img34ByTag(
+        [Summary("tags", "Тэги через запятую")] string tags = "",
+        [Summary("rate", "Рейтинг 1(general) 2(ecchi) 3(sex)")] int rate = 1)
     {
-        await DeferAsync(true).ConfigureAwait(false);
+        await DeferAsync(false).ConfigureAwait(false);
 
-        HttpHelper httpHelper = new HttpHelper();
+        string baseUrl = "https://gelbooru.com/index.php?";
+        string apiKey = "e3055e873170fef1e69e409fd1d48f832b01bb9097c19122e9b718112efa8c6bbdcc9410f501cff2f6922c1370d559447718fcf475ae218873d4eaec2102aeff";
+        string userId = "1765730";
+        string banTags = "+-video+-yaoi+-loli+-shota+-rape+-futa+-peeing+-fart+-diaper+-male_penetrated";
+        string addTags = "";
+        string rateLong = "general";
 
-        string? anek = httpHelper.Anek();
+        while (tags[..1] == ",")
+            tags = tags[1..];
+        while (tags[tags.Length - 1] == ',')
+            tags = tags[..^1];
 
-        if (anek != null)
+        if (tags != "")
+            addTags = '+' + tags.Replace(", ", "+").Replace(' ', '_');
+
+        if (rate == 3)
+            rateLong = "explicit";
+        else if (rate == 2)
+            rateLong = "questionable+-rating%3aSensitive";
+        else if (rate == 1)
+            rateLong = "general";
+
+        string url = $"{baseUrl}page=dapi&s=post&q=index&tags=sort%3arandom{banTags}{addTags}+rating%3a{rateLong}+score%3a>{30}&limit=3&api_key={apiKey}&user_id={userId}&json=1";
+
+        GelBooru? deserializeJson = null;
+        string responseContent;
+
+        using (HttpClient client = new HttpClient())
         {
-            await FollowupAsync(anek).ConfigureAwait(false);
-        }
-        await FollowupAsync("ERROR", ephemeral:true).ConfigureAwait(false);
+            HttpResponseMessage response = await client.GetAsync(url);
 
+            responseContent = await response.Content.ReadAsStringAsync();
+        }
+
+        if (responseContent != null)
+        {
+            deserializeJson = JsonConvert.DeserializeObject<GelBooru>(responseContent);
+        }
+
+        if (deserializeJson == null)
+        {
+            await FollowupAsync("ERROR ALL").ConfigureAwait(false);
+            return;
+        }
+
+        if (deserializeJson.Post == null || deserializeJson.Post.Count != 3)
+        {
+            await FollowupAsync("ERROR TAGS").ConfigureAwait(false);
+            return;
+        }
+
+        EmbedBuilder builder = new EmbedBuilder();
+
+        builder.WithTitle($"id#{deserializeJson.Post[0].Id}#{deserializeJson.Post[1].Id}#{deserializeJson.Post[2].Id}");
+        builder.Url = "https://twitter.com";
+        if (deserializeJson.Post[0].SampleUrl != null)
+            builder.ImageUrl = deserializeJson.Post[0].SampleUrl.ToString();
+        else if (deserializeJson.Post[0].FileUrl != null)
+            builder.ImageUrl = deserializeJson.Post[0].FileUrl.ToString();
+
+        Embed embed = builder.Build();
+
+
+        builder = new EmbedBuilder();
+
+        builder.Url = "https://twitter.com";
+        if (deserializeJson.Post[1].SampleUrl != null)
+            builder.ImageUrl = deserializeJson.Post[1].SampleUrl.ToString();
+        else if (deserializeJson.Post[1].FileUrl != null)
+            builder.ImageUrl = deserializeJson.Post[1].FileUrl.ToString();
+
+        Embed embed2 = builder.Build();
+
+
+        builder = new EmbedBuilder();
+
+        builder.Url = "https://twitter.com";
+        if (deserializeJson.Post[2].SampleUrl != null) //Иногда пост не содержит этой ссылки
+            builder.ImageUrl = deserializeJson.Post[2].SampleUrl.ToString();
+        else if (deserializeJson.Post[2].FileUrl != null) //Более тяжелый файл
+            builder.ImageUrl = deserializeJson.Post[2].FileUrl.ToString();
+
+        Embed embed3 = builder.Build();
+
+        await FollowupAsync(embeds: new[] { embed, embed2, embed3 }).ConfigureAwait(false);
+
+        //EmbedBuilder builder = new EmbedBuilder();
+
+        //builder.WithTitle($"Random (id#{deserializeJson.Post.First().Id})");
+        //if (deserializeJson.Post.First().SampleUrl != null)
+        //    builder.ImageUrl = deserializeJson.Post.First().SampleUrl.ToString();
+        //else if (deserializeJson.Post.First().FileUrl != null)
+        //    builder.ImageUrl = deserializeJson.Post.First().FileUrl.ToString();
+
+        //Embed embed = builder.Build();
+
+        //await FollowupAsync(embed: embed).ConfigureAwait(false);
+    }
+
+    [SlashCommand("img34byid", "Поиск поста Gelbooru по id")]
+    public async Task Img34ById(
+        [Summary("id","id изображения")] int id,
+        [Summary("viewTags","Отображение тегов 0(нет) 1(да)")] int viewTags = 1)
+    {
+        await DeferAsync(false).ConfigureAwait(false);
+
+
+        string url = $"https://gelbooru.com/index.php?page=post&s=view&id={id}";
+
+        string img = "";
+        string artist = "";
+        string character = "";
+        string copyright = "";
+        string general = "";
+
+        string htmlContent;
+
+        using (HttpClient client = new HttpClient())
+        {
+            HttpResponseMessage response = await client.GetAsync(url);
+
+            htmlContent = await response.Content.ReadAsStringAsync();
+        }
+
+        var config = Configuration.Default.WithDefaultLoader();
+        var context = BrowsingContext.New(config);
+
+        var document = await context.OpenAsync(req => req.Content(htmlContent));
+
+
+        var imgDoc = document.QuerySelector(".image-container");
+
+        if (imgDoc != null)
+        {
+            string image = imgDoc.QuerySelector("img")?.GetAttribute("src") ?? "Not available";
+
+            img = image;
+        }
+
+
+        var artistDoc = document.QuerySelectorAll(".tag-type-artist");
+
+        if (artistDoc != null)
+        {
+
+            foreach (var item in artistDoc)
+            {
+                string name = "";
+
+                var items = item.QuerySelectorAll("a");
+
+                if (items != null)
+                {
+                    foreach (var item2 in items)
+                    {
+                        name += item2.TextContent;
+                    }
+                }
+                artist += name[1..] + ", ";
+            }
+        }
+
+
+        var characterDoc = document.QuerySelectorAll(".tag-type-character");
+
+        if (characterDoc != null)
+        {
+
+            foreach (var item in characterDoc)
+            {
+                string name = "";
+
+                var items = item.QuerySelectorAll("a");
+
+                if (items != null)
+                {
+                    foreach (var item2 in items)
+                    {
+                        name += item2.TextContent;
+                    }
+                }
+                character += name[1..] + ", ";
+            }
+        }
+
+
+        var copyrightDoc = document.QuerySelectorAll(".tag-type-copyright");
+
+        if (copyrightDoc != null)
+        {
+
+            foreach (var item in copyrightDoc)
+            {
+                string name = "";
+
+                var items = item.QuerySelectorAll("a");
+
+                if (items != null)
+                {
+                    foreach (var item2 in items)
+                    {
+                        name += item2.TextContent;
+                    }
+                }
+                copyright += name[1..] + ", ";
+            }
+        }
+
+
+        var generalDoc = document.QuerySelectorAll(".tag-type-general");
+
+        if (generalDoc != null)
+        {
+
+            foreach (var item in generalDoc)
+            {
+                string name = "";
+
+                var items = item.QuerySelectorAll("a");
+
+                if (items != null)
+                {
+                    foreach (var item2 in items)
+                    {
+                        name += item2.TextContent;
+                    }
+                }
+                general += name[1..] + ", ";
+            }
+        }
+
+
+        EmbedBuilder builder = new EmbedBuilder();
+
+        builder.WithTitle($"Search by id#{id}");
+        builder.Url = url;
+        if (img != "")
+            builder.ImageUrl = img;
+        if (viewTags == 1)
+        {
+            if (artist != "")
+                builder.AddField("Artist", $"{artist[..^2]}");
+            if (character != "")
+                builder.AddField("Character", $"{character[..^2]}");
+            if (copyright != "")
+                builder.AddField("Copyright", $"{copyright[..^2]}");
+            if (general != "")
+                builder.AddField("General", $"{general[..^2]}");
+        }
+        Embed embed = builder.Build();
+
+        await FollowupAsync(embed: embed).ConfigureAwait(false);
     }
 
     [SlashCommand("deletetag", "Удаляем мемы с определённым тегом")]
